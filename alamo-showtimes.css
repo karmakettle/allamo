@@ -1,0 +1,57 @@
+body {
+    padding: 0 10px 0 10px;
+}
+
+.clear {
+    clear: both;
+}
+
+.description-row {
+    display: none;
+}
+
+.dropdown {
+    border: solid black;
+    border-width: 0 2px 2px 0;
+    /* If inline-block is not set, rotate (magic behind the arrow) will not work */
+    display: inline-block;
+    /* Include some space to the right of the arrow */
+    margin-right: 8px;
+    /* Size of the arrow */
+    padding: 4px;
+
+    transform: rotate(-45deg);
+    /* For Safari 3.1 to 6.0 */
+    -webkit-transition-property: transform;
+    -webkit-transition-duration: 0.1s;
+    -webkit-transition-timing-function: ease-in;
+    /* Standard syntax */
+    transition-property: transform;
+    transition-duration: 0.1s;
+    transition-timing-function: ease-in;
+}
+
+.details {
+    padding: 10px 0 0 10px;
+}
+
+.dropdown.active {
+    transform: rotate(45deg);
+}
+
+.left-col {
+    display: inline-block;
+    float: left;
+    width: 40%;
+}
+
+.right-col {
+    display: inline-block;
+    float: right;
+    width: 30%;
+}
+
+.row {
+    border-bottom: 1px solid #e0b3b3;
+    height: auto;
+}
