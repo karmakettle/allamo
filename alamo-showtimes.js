@@ -1,12 +1,77 @@
-// When running node tests, module will be defined
+// For node
 if (typeof module !== "undefined") {
   module.exports = {
     "getMovieData": getMovieDataByName
   }
 }
 
+function displayMoviesByName(alamoFeed) {
+  var movies = getMovieDataByName(alamoFeed);
+  var sortedMovieNames = sortMoviesByStartDate(movies);
+
+  for (var i = 0; i < sortedMovieNames.length; i++) {
+    var movieName = sortedMovieNames[i];
+    var movieInfo = movies[movieName];
+    var movieDetailsLink = movieInfo["link"];
+    var runTime = movieInfo["runTime"];
+    var movieTheaters = Object.keys(movieInfo["theaters"]).join(", ");
+    // Flatten showtimes for all theaters into one list and sort them from earliest to latest
+    // TODO:  Change object structure so this isn't necessary
+    var movieShowtimes = Object.values(movieInfo["theaters"]).reduce((showtimes, currentTheater) => {
+        return showtimes.concat(Object.values(currentTheater));
+      }, []).sort((a, b) => {
+        if (a < b) {
+          return -1;
+        }
+        if (a > b) {
+          return 1;
+        }
+        return 0;
+      });
+    var showtimesAsHtmlList = getShowtimesAsHtmlList(movieShowtimes);
+    var dateRange = getDateRangeFromShowtimes(movieShowtimes);
+
+    var movieRow = $("<div class='row'>"
+     + "  <div class='top-info-row'>"
+     + "    <div class='left-col'><span class='dropdown'></span>" + movieName + "</div>"
+     + "    <div class='right-col'>" + dateRange + "</div>"
+     + "    <div class='right-col'>" + movieTheaters + "</div>"
+     + "    <div class='clear'></div>"
+     + "  </div>"
+     + "  <div class='description-row'>"
+     + "    <div class='details'><a target='_blank' href='" + movieDetailsLink + "'>" + movieDetailsLink + "</a></div>"
+     + "    <div class='details'>Runtime: " + runTime + " minutes</div>"
+     +      showtimesAsHtmlList
+     + "  </div>"
+     + "</div>"
+     + "<div class='clear'></div>");
+
+    $("body").append(movieRow);
+  }
+
+  // TODO: List locations next to showtimes in dropdown. instead of the structure 'theater': [showtimes], use
+  // "showtimes" : [{"theater": "theaterName", "time": "showtime"}, {"theater": "theaterName", "time": "showtime"}]
+  // Future: being able to put some in a favorites list; seeing a thumbnail and description in the dropdown
+
+  $(".top-info-row").click(event => {
+    var row = event.currentTarget;
+    var dropdown = $(row).find('.dropdown');
+
+    if (!dropdown.hasClass('active')) {
+      dropdown.addClass('active');
+      $(row).parent().find('.description-row').fadeIn(400);
+    } else {
+      dropdown.removeClass('active');
+      $(row).parent().find('.description-row').fadeOut(100);
+    }
+  });
+}
+
 /*
-  Example of movie object:
+  Expects a json object with alamo movies ordered by date and returns the list of movies
+  ordered alphabetically with theater, date range, and individual showtime information.
+
+  Returns a movies object:
   {
     "2001: A SPACE ODYSSEY 4K Restoration (Digital)": {
     "format": "Digital",
@@ -35,82 +100,18 @@ if (typeof module !== "undefined") {
       }
     }
   }
-*/
 
-function displayMoviesByName(alamoFeed) {
-  var movies = getMovieDataByName(alamoFeed);
-  var sortedMovieNames = sortMoviesByStartDate(movies);
-
-  // ALAMO DRAFTHOUSE LINK IS https://drafthouse.com/uid/{FilmId}}
-  for (var i = 0; i < sortedMovieNames.length; i++) {
-    var movieName = sortedMovieNames[i];
-    var movieInfo = movies[movieName];
-    var movieDetailsLink = movieInfo["link"];
-    var runTime = movieInfo["runTime"];
-    var movieTheaters = Object.keys(movieInfo["theaters"]).join(", ");
-    // Flatten showtimes for all theaters into one list and sort them from earliest to latest
-    var movieShowtimes = Object.values(movieInfo["theaters"]).reduce((showtimes, currentTheater) => {
-        return showtimes.concat(Object.values(currentTheater));
-      }, []).sort((a, b) => {
-        if (a < b) {
-          return -1;
-        }
-        if (a > b) {
-          return 1;
-        }
-        return 0;
-      });
-    var showtimesAsHtmlList = getShowtimesAsHtmlList(movieShowtimes);
-    var dateRange = getDateRangeFromShowtimes(movieShowtimes);
-    var movieRow = $("<div class='row'>"
-     + "  <div class='top-info-row'>"
-     + "    <div class='left-col'><span class='dropdown'></span>" + movieName + "</div>"
-     + "    <div class='right-col'>" + dateRange + "</div>"
-     + "    <div class='right-col'>" + movieTheaters + "</div>"
-     + "    <div class='clear'></div>"
-     + "  </div>"
-     + "  <div class='description-row'>"
-     + "    <div class='details'><a target='_blank' href='" + movieDetailsLink + "'>" + movieDetailsLink + "</a></div>"
-     + "    <div class='details'>Runtime: " + runTime + " minutes</div>"
-     +      showtimesAsHtmlList
-     + "  </div>"
-     + "</div>"
-     + "<div class='clear'></div>");
-
-    $("body").append(movieRow);
-  }
-
-  // LEFT OFF: deploy
-  // List location next to showtimes in dropdown. maybe instead of having 'theater': [showtimes], you could have
-  // "showtimes" : [{"theater": "theaterName", "time": "showtime"}, {"theater": "theaterName", "time": "showtime"}]
-  // Future: being able to put some in a favorites list; seeing a thumbnail and description in the dropdown
-
-  $(".top-info-row").click(event => {
-    var row = event.currentTarget;
-    var dropdown = $(row).find('.dropdown');
-
-    if (!dropdown.hasClass('active')) {
-      dropdown.addClass('active');
-      $(row).parent().find('.description-row').fadeIn(400);
-    } else {
-      dropdown.removeClass('active');
-      $(row).parent().find('.description-row').fadeOut(100);
-    }
-  });
-}
-
-/*
-  Expects a json object with alamo movies ordered by date and returns the list of movies
-  ordered alphabetically with theater, date range, and individual showtime information.
+  For every date, for every theater, for every film showing at that theater, for every format that the film is showing
+  in --> 
+    * combine the format and film name to get the title;
+    * the run time should be consistent across all dates and cinemas (assumption)
+    * create movie object with these items if it doesn't exist
+    * get all showtimes for a film for that theater (timestamp with date + time)
+    * set showtimes for a movie for a theater or add to pre-existing list
 */
 function getMovieDataByName(alamoMoviesByDate) {
     var movies = {}
     var dates = alamoMoviesByDate["Market"]["Dates"];
-
-    // TODO: put movie objects in theater buckets for theater grouping while iterating through loop?
-    // i'm focusing on the full-movie view first but I wanted to note that under the Dates list is
-    // the "Cinemas" list with names that are easily accessible. On second thought, this setup was a
-    // little complex, so maybe a separate function for this?
 
     for (var i = 0; i < dates.length; i++) {
         // List of cinemas with movies showing on a particular date
@@ -127,8 +128,8 @@ function getMovieDataByName(alamoMoviesByDate) {
                 var runTime = film["FilmRuntime"];
                 var movieDetailsLink = "https://drafthouse.com/uid/" + film["FilmId"]
 
-                // NOTE: confirmed that series length is always 1
-                // Movie name will include format I've decided, so every movie name is like "Space Odyssey - 70mm"
+                // NOTE: confirmed that series length is always 1 in example feed (assumption)
+                // Include format in movie name, e.g., "2001: A Space Odyssey (70mm)"
                 var formats = film["Series"][0]["Formats"];
                 for (var l = 0; l < formats.length; l++) {
                     var format = formats[l];
@@ -215,23 +216,3 @@ function getShowtimesAsHtmlList(showtimes) {
 
   return showtimesHtml + "</ul>";
 }
-
-
-/*
-  Things I hated about working with JS in this project
-  --> reading the json sucked, tons of for loops
-  --> writing to an object, property existence check
-  --> forgetting how to iterate over maps vs lists all the time
-  --> the flattening >u< I really need to refactor that into its own method. or use underscore.
-*/
-
-
-/* 
-  For every date, for every theater, for every film showing at that theater, for every format that the film is showing
-  in --> 
-    * combine the format and film name to get the title;
-    * the run time should be consistent across all dates and cinemas i'm thinking...
-    * create movie object with these items if it doesn't exist
-    * get all showtimes for a film for that theater (will have timestamp with date + time), put those in a list
-    * get or create the theater list for the movie object
-*/
